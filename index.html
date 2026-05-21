@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIara - Assistente de Scripts</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/lua.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/java.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">AI</div>
+            <div class="logo-text">AIara</div>
+        </div>
+        <button class="new-chat-btn" id="newChatBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Novo Chat
+        </button>
+        <div class="history-section">
+            <div class="history-title">Recentes</div>
+            <div id="historyList"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="footer-item" onclick="alert('AIara v1.0 - Assistente Offline de Scripts')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                Sobre AIara
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="chat-container" id="chatContainer">
+            <!-- Welcome Screen -->
+            <div class="welcome-screen" id="welcomeScreen">
+                <div class="welcome-icon">AI</div>
+                <h1 class="welcome-title">AIara</h1>
+                <p class="welcome-subtitle">
+                    Assistente offline para criar scripts em Lua (Roblox), Python e Java.
+                    Descreva o que precisa e a AIara gera o código completo.
+                </p>
+                <div class="suggestions">
+                    <div class="suggestion-card" data-suggestion="Crie um script Lua para Roblox que faz um personagem voar ao apertar a tecla F">
+                        <div class="icon">🎮</div>
+                        <div class="title">Script de Voo Roblox</div>
+                        <div class="desc">Personagem voa ao apertar F</div>
+                    </div>
+                    <div class="suggestion-card" data-suggestion="Crie um script Python que calcula a média de notas de um aluno">
+                        <div class="icon">🐍</div>
+                        <div class="title">Calculadora de Média</div>
+                        <div class="desc">Python - Média de notas</div>
+                    </div>
+                    <div class="suggestion-card" data-suggestion="Crie um script Java que simula um sistema bancário simples">
+                        <div class="icon">☕</div>
+                        <div class="title">Sistema Bancário</div>
+                        <div class="desc">Java - POO completo</div>
+                    </div>
+                    <div class="suggestion-card" data-suggestion="Crie um script Lua para Roblox que spawna armas aleatórias">
+                        <div class="icon">🔫</div>
+                        <div class="title">Spawner de Armas</div>
+                        <div class="desc">Roblox - Armas aleatórias</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Descreva o script que você quer criar..." 
+                    rows="1"
+                ></textarea>
+                <button class="send-btn" id="sendBtn" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+            <div class="input-hint">AIara pode cometer erros. Verifique os scripts antes de usar.</div>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
