@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Desenho</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            touch-action: none;
+        }
+
+        #camera {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        #overlay-img {
+            position: fixed;
+            z-index: 10;
+            opacity: 0.5;
+            display: none;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            pointer-events: auto;
+            will-change: transform;
+        }
+
+        #draw-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 5;
+            touch-action: none;
+        }
+
+        .bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 8px 10px;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .top-bar { top: 0; }
+        .bottom-bar { bottom: 0; }
+
+        .btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn:active { 
+            transform: scale(0.92); 
+            background: rgba(255,255,255,0.35); 
+        }
+
+        .btn-primary { background: #007AFF; border-color: #007AFF; }
+        .btn-danger { background: #FF3B30; border-color: #FF3B30; }
+        .btn-success { background: #34C759; border-color: #34C759; }
+
+        .color {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+        }
+
+        .color.active { 
+            border-color: #fff; 
+            transform: scale(1.15); 
+        }
+
+        input[type="range"] { 
+            width: 70px; 
+        }
+
+        .slider-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #fff;
+            font-size: 11px;
+        }
+
+        #start-screen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #start-screen h1 { 
+            font-size: 2.2rem; 
+            color: #007AFF; 
+            margin-bottom: 10px; 
+        }
+
+        #start-screen p { 
+            color: #888; 
+            margin-bottom: 25px; 
+            font-size: 1rem; 
+        }
+
+        .start-btn {
+            background: #007AFF;
+            color: #fff;
+            border: none;
+            padding: 16px 36px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        #file-input { 
+            display: none; 
+        }
+
+        .hint {
+            position: fixed;
+            top: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 200;
+            display: none;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1>🎨 AR Desenho</h1>
+        <p>Câmera + foto. Toque na foto e arraste!</p>
+        <button class="start-btn" onclick="startCamera()">📷 Abrir Câmera</button>
+    </div>
+
+    <video id="camera" autoplay playsinline muted></video>
+    <img id="overlay-img" src="" alt="" draggable="false">
+    <canvas id="draw-layer"></canvas>
+
+    <div class="bar top-bar" id="top-bar" style="display:none;">
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">📷 Foto</button>
+        <div class="slider-box">
+            <span>👁️</span>
+            <input type="range" id="op" min="5" max="100" value="50" oninput="setOp(this.value)">
+        </div>
+        <div class="slider-box">
+            <span>🔍</span>
+            <input type="range" id="zm" min="20" max="300" value="100" oninput="setZm(this.value)">
+        </div>
+        <button class="btn" onclick="undo()">↩️</button>
+        <button class="btn" onclick="redo()">↪️</button>
+        <button class="btn btn-success" onclick="save()">💾</button>
+        <button class="btn btn-danger" onclick="clearAll()">🗑️</button>
+    </div>
+
+    <div class="bar bottom-bar" id="bottom-bar" style="display:none;">
+        <div class="color active" style="background:#fff" onclick="pick('#fff',this)"></div>
+        <div class="color" style="background:#FF3B30" onclick="pick('#FF3B30',this)"></div>
+        <div class="color" style="background:#FF9500" onclick="pick('#FF9500',this)"></div>
+        <div class="color" style="background:#FFCC00" onclick="pick('#FFCC00',this)"></div>
+        <div class="color" style="background:#34C759" onclick="pick('#34C759',this)"></div>
+        <div class="color" style="background:#007AFF" onclick="pick('#007AFF',this)"></div>
+        <div class="color" style="background:#5856D6" onclick="pick('#5856D6',this)"></div>
+        <div class="color" style="background:#000" onclick="pick('#000',this)"></div>
+        <div class="slider-box">
+            <span>✏️</span>
+            <input type="range" id="sz" min="1" max="40" value="5" oninput="sz=parseInt(this.value)">
+            <span>🖌️</span>
+        </div>
+    </div>
+
+    <div class="hint" id="hint"></div>
+    <input type="file" id="file-input" accept="image/*" onchange="loadImg(event)">
+
+    <script>
+        const vid = document.getElementById('camera');
+        const cvs = document.getElementById('draw-layer');
+        const ctx = cvs.getContext('2d');
+        const img = document.getElementById('overlay-img');
+        const hint = document.getElementById('hint');
+
+        let sz = 5, cor = '#fff', desenhando = false;
+        let hist = [], passo = -1;
+
+        // Foto: posição livre
+        let foto = { x:0, y:0, esc:1, arrastando:false, dx:0, dy:0, ix:0, iy:0 };
+        let dedos = [];
+
+        function resize() {
+            const tmp = document.createElement('canvas');
+            tmp.width = cvs.width; tmp.height = cvs.height;
+            tmp.getContext('2d').drawImage(cvs, 0, 0);
+            cvs.width = window.innerWidth;
+            cvs.height = window.innerHeight;
+            ctx.drawImage(tmp, 0, 0);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        async function startCamera() {
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }, audio: false
+                });
+                vid.srcObject = s;
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('top-bar').style.display = 'flex';
+                document.getElementById('bottom-bar').style.display = 'flex';
+                salvarHist();
+            } catch(e) { 
+                alert('Câmera bloqueada: ' + e.message); 
+            }
+        }
+
+        function mostrar(t, ms=2500) {
+            hint.textContent = t;
+            hint.style.display = 'block';
+            setTimeout(() => hint.style.display = 'none', ms);
+        }
+
+        function loadImg(e) {
+            const f = e.target.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = function(ev) {
+                const temp = new Image();
+                temp.onload = function() {
+                    foto.x = (window.innerWidth - temp.naturalWidth) / 2;
+                    foto.y = (window.innerHeight - temp.naturalHeight) / 2;
+                    foto.esc = 1;
+                    img.src = ev.target.result;
+                    img.style.display = 'block';
+                    img.style.width = temp.naturalWidth + 'px';
+                    img.style.height = temp.naturalHeight + 'px';
+                    atualizarFoto();
+                    document.getElementById('op').value = 50;
+                    document.getElementById('zm').value = 100;
+                    img.style.opacity = '0.5';
+                    mostrar('👆 Arraste a foto! Toque fora pra desenhar');
+                };
+                temp.src = ev.target.result;
+            };
+            r.readAsDataURL(f);
+        }
+
+        function atualizarFoto() {
+            img.style.left = foto.x + 'px';
+            img.style.top = foto.y + 'px';
+            img.style.transform = 'scale(' + foto.esc + ')';
+            img.style.transformOrigin = '0 0';
+        }
+
+        function setOp(v) { 
+            img.style.opacity = v/100; 
+        }
+
+        function setZm(v) { 
+            foto.esc = v/100; 
+            atualizarFoto(); 
+        }
+
+        // ===== TOUCH NA FOTO = MOVER =====
+        img.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const t = e.touches;
+
+            if(t.length === 1) {
+                // Um dedo = arrastar
+                foto.arrastando = true;
+                foto.dx = t[0].clientX;
+                foto.dy = t[0].clientY;
+                foto.ix = foto.x;
+                foto.iy = foto.y;
+            } else if(t.length === 2) {
+                // Dois dedos = zoom
+                foto.arrastando = false;
+                dedos = [
+                    {x: t[0].clientX, y: t[0].clientY},
+                    {x: t[1].clientX, y: t[1].clientY}
+                ];
+                const dist = Math.hypot(dedos[1].x - dedos[0].x, dedos[1].y - dedos[0].y);
+                foto.distIni = dist;
+                foto.escIni = foto.esc;
+            }
+        }, { passive: false });
+
+        img.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const t = e.touches;
+
+            if(t.length === 1 && foto.arrastando) {
+                foto.x = foto.ix + (t[0].clientX - foto.dx);
+                foto.y = foto.iy + (t[0].clientY - foto.dy);
+                atualizarFoto();
+            } else if(t.length === 2) {
+                const d0 = {x: t[0].clientX, y: t[0].clientY};
+                const d1 = {x: t[1].clientX, y: t[1].clientY};
+                const dist = Math.hypot(d1.x - d0.x, d1.y - d0.y);
+                foto.esc = Math.max(0.2, Math.min(5, (dist / foto.distIni) * foto.escIni));
+                document.getElementById('zm').value = foto.esc * 100;
+                atualizarFoto();
+            }
+        }, { passive: false });
+
+        img.addEventListener('touchend', function(e) {
+            foto.arrastando = false;
+        });
+
+        // ===== TOUCH NO CANVAS = DESENHAR =====
+        function getPos(e) {
+            const t = e.touches;
+            if(t && t.length > 0) return {x: t[0].clientX, y: t[0].clientY};
+            return {x: e.clientX, y: e.clientY};
+        }
+
+        function comecar(e) {
+            // Se tocou na foto, não desenha
+            if(e.target === img) return;
+            desenhando = true;
+            const p = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = cor;
+            ctx.lineWidth = sz;
+        }
+
+        function riscar(e) {
+            if(!desenhando) return;
+            const p = getPos(e);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+        }
+
+        function parar() {
+            if(desenhando) {
+                desenhando = false;
+                ctx.closePath();
+                salvarHist();
+            }
+        }
+
+        cvs.addEventListener('touchstart', comecar, { passive: false });
+        cvs.addEventListener('touchmove', riscar, { passive: false });
+        cvs.addEventListener('touchend', parar);
+        cvs.addEventListener('touchcancel', parar);
+
+        // Mouse também (pra testar no PC)
+        cvs.addEventListener('mousedown', comecar);
+        cvs.addEventListener('mousemove', riscar);
+        cvs.addEventListener('mouseup', parar);
+        cvs.addEventListener('mouseleave', parar);
+
+        function pick(c, el) {
+            cor = c;
+            document.querySelectorAll('.color').forEach(x => x.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function clearAll() {
+            if(confirm('Limpar tudo?')) {
+                ctx.clearRect(0, 0, cvs.width, cvs.height);
+                salvarHist();
+            }
+        }
+
+        function salvarHist() {
+            passo++;
+            if(passo < hist.length) hist.length = passo;
+            hist.push(cvs.toDataURL());
+            if(hist.length > 30) { hist.shift(); passo--; }
+        }
+
+        function undo() {
+            if(passo > 0) { 
+                passo--; 
+                restaurar(); 
+            }
+        }
+
+        function redo() {
+            if(passo < hist.length - 1) { 
+                passo++; 
+                restaurar(); 
+            }
+        }
+
+        function restaurar() {
+            const i = new Image();
+            i.onload = function() {
+                ctx.clearRect(0, 0, cvs.width, cvs.height);
+                ctx.drawImage(i, 0, 0);
+            };
+            i.src = hist[passo];
+        }
+
+        function save() {
+            const out = document.createElement('canvas');
+            out.width = cvs.width;
+            out.height = cvs.height;
+            const x = out.getContext('2d');
+
+            // Fundo = câmera
+            if(vid.readyState >= 2) {
+                const vr = vid.videoWidth / vid.videoHeight;
+                const sr = cvs.width / cvs.height;
+                let sx, sy, sw, sh;
+                if(vr > sr) {
+                    sh = vid.videoHeight; sw = sh * sr;
+                    sx = (vid.videoWidth - sw)/2; sy = 0;
+                } else {
+                    sw = vid.videoWidth; sh = sw / sr;
+                    sx = 0; sy = (vid.videoHeight - sh)/2;
+                }
+                x.drawImage(vid, sx, sy, sw, sh, 0, 0, cvs.width, cvs.height);
+            }
+
+            // Foto overlay
+            if(img.style.display === 'block') {
+                x.globalAlpha = parseFloat(img.style.opacity) || 0.5;
+                x.drawImage(img, foto.x, foto.y, img.naturalWidth * foto.esc, img.naturalHeight * foto.esc);
+                x.globalAlpha = 1;
+            }
+
+            // Desenho
+            x.drawImage(cvs, 0, 0);
+
+            const a = document.createElement('a');
+            a.download = 'ar-desenho-' + Date.now() + '.png';
+            a.href = out.toDataURL('image/png');
+            a.click();
+            mostrar('💾 Salvo!');
+        }
+
+        // Bloquear zoom da página
+        document.addEventListener('touchmove', function(e) {
+            if(e.target !== img) e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('gesturestart', function(e) { 
+            e.preventDefault(); 
+        });
+    </script>
+</body>
+</html>
